@@ -1,0 +1,99 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId",        "order": "ASCENDING" },
+        { "fieldPath": "mesCompetencia",  "order": "ASCENDING" },
+        { "fieldPath": "isDeleted",       "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId",  "order": "ASCENDING" },
+        { "fieldPath": "status",    "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId",       "order": "ASCENDING" },
+        { "fieldPath": "tipo",           "order": "ASCENDING" },
+        { "fieldPath": "mesCompetencia", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted",      "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "asaasId",  "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId",      "order": "ASCENDING" },
+        { "fieldPath": "dataPagamento", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId",       "order": "ASCENDING" },
+        { "fieldPath": "cnpjAtrelado",   "order": "ASCENDING" },
+        { "fieldPath": "mesCompetencia", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted",      "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId",  "order": "ASCENDING" },
+        { "fieldPath": "origem",    "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId",     "order": "ASCENDING" },
+        { "fieldPath": "status",       "order": "ASCENDING" },
+        { "fieldPath": "dataPrevisao", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId",       "order": "ASCENDING" },
+        { "fieldPath": "origem",         "order": "ASCENDING" },
+        { "fieldPath": "mesCompetencia", "order": "ASCENDING" },
+        { "fieldPath": "fixedCostId",    "order": "ASCENDING" },
+        { "fieldPath": "isDeleted",      "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId",    "order": "ASCENDING" },
+        { "fieldPath": "asaasStatus", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted",   "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

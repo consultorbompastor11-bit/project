@@ -1,0 +1,227 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── helpers base ────────────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Autentica E garante que a conta não foi revogada
+    function isActiveUser() {
+      return isAuthenticated() && userData().isActive == true;
+    }
+
+    // ─── helpers de role (padrão único para uso em patches) ──────────────────
+    // FASE 1 — apenas ADMIN e OPERACIONAL existem.
+    // FINANCEIRO e GESTOR só existem a partir da Fase 2.
+    // Nunca usar hasRole('FINANCEIRO') ou isFinanceiro() em patches de Fase 1.
+
+    function hasRole(role) {
+      return isActiveUser() && userData().role == role;
+    }
+
+    function hasAnyRole(roles) {
+      return isActiveUser() && userData().role in roles;
+    }
+
+    function isAdmin() {
+      return hasRole('ADMIN');
+    }
+
+    function isFinanceiro() {
+      // Disponível a partir da Fase 2. Inclui ADMIN.
+      return hasAnyRole(['ADMIN', 'FINANCEIRO']);
+    }
+
+    function isGestor() {
+      // Disponível a partir da Fase 2. Inclui ADMIN.
+      return hasAnyRole(['ADMIN', 'GESTOR']);
+    }
+
+    function isOperacional() {
+      return hasAnyRole(['ADMIN', 'OPERACIONAL']);
+    }
+
+    // ─── helpers de tenant e CNPJ ────────────────────────────────────────────
+    function isSameTenant(tenantId) {
+      return isActiveUser() && userData().tenantId == tenantId;
+    }
+
+    function hasCnpjAccess(cnpj) {
+      let access = userData().cnpjAccess;
+      return access.size() == 0 || cnpj in access;
+    }
+
+    // ─── helpers de AuditLog ─────────────────────────────────────────────────
+    // Ações permitidas no frontend. Ações geradas exclusivamente pelo backend
+    // não precisam estar aqui — são gravadas via Admin SDK sem passar por estas rules.
+    function isAllowedAuditAction(action) {
+      return action in [
+        'CREATE', 'UPDATE', 'SOFT_DELETE', 'RESTORE',
+        'STATUS_CHANGE', 'PERMISSION_CHANGE',
+        'EXPORT_CSV', 'VIEW_SENSITIVE',
+        'ASAAS_SYNC_MANUAL', 'SESSION_START', 'SESSION_END',
+        'OVERRIDE_MANUAL', 'EXCEPTION_MANUAL',
+        'GATE_EXCEPTION', 'APPROVE', 'REJECT', 'ACTIVATE', 'SUSPEND',
+        'IDENTIFY_PAYMENT', 'LIBERATE', 'BLOCK'
+      ];
+    }
+
+    // ─── Usuários ────────────────────────────────────────────────────────────
+    // Usuário lê apenas o próprio perfil. Escrita somente via Admin SDK/backend.
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // ─── Contadores ──────────────────────────────────────────────────────────
+    match /counters/{counterId} {
+      allow read: if isActiveUser();
+      allow write: if isAdmin();
+    }
+
+    // ─── Tenant ──────────────────────────────────────────────────────────────
+    match /tenants/{tenantId} {
+
+      // Transactions
+      match /transactions/{docId} {
+        allow read: if isSameTenant(tenantId)
+          && hasCnpjAccess(resource.data.cnpjAtrelado)
+          && (isAdmin() || resource.data.visibilidade == 'OPERACIONAL_PURO');
+        allow create: if isSameTenant(tenantId)
+          && hasCnpjAccess(request.resource.data.cnpjAtrelado)
+          && (isAdmin() || request.resource.data.visibilidade == 'OPERACIONAL_PURO')
+          && request.resource.data.version == 1;
+        allow update: if isSameTenant(tenantId)
+          && hasCnpjAccess(resource.data.cnpjAtrelado)
+          && hasCnpjAccess(request.resource.data.cnpjAtrelado)
+          && (isAdmin() || (
+              resource.data.visibilidade == 'OPERACIONAL_PURO'
+              && request.resource.data.visibilidade == 'OPERACIONAL_PURO'
+          ))
+          && request.resource.data.version == resource.data.version + 1;
+        allow delete: if false; // soft delete apenas via update
+      }
+
+      // Dívidas — apenas ADMIN
+      match /debts/{docId} {
+        allow read, write: if isSameTenant(tenantId) && isAdmin();
+      }
+
+      // Custos fixos
+      match /fixedCosts/{docId} {
+        allow read: if isSameTenant(tenantId) && isActiveUser();
+        allow write: if isSameTenant(tenantId) && isAdmin();
+      }
+
+      // Metas
+      match /goals/{docId} {
+        allow read: if isSameTenant(tenantId) && isActiveUser();
+        allow write: if isSameTenant(tenantId) && isAdmin();
+      }
+
+      // ═════════════════════════════════════════════════════════════════════════
+      // FASE 1.5 — Cliente Mínimo, Liberação Financeira, Catálogo de Documentos
+      // ═════════════════════════════════════════════════════════════════════════
+
+      // Clients - Fase 1.5
+      // ADMIN: full access
+      // OPERACIONAL: read-only (financial fields visible, cannot modify)
+      match /clients/{docId} {
+        allow read: if isSameTenant(tenantId) && isActiveUser();
+        allow create: if isSameTenant(tenantId) && isAdmin()
+          && request.resource.data.keys().hasAll(['tenantId', 'nomeFantasia', 'responsavel', 'lifecycleStatus', 'activationStatus'])
+          && request.resource.data.tenantId == tenantId
+          && request.resource.data.version == 1
+          && request.resource.data.isDeleted == false;
+        allow update: if isSameTenant(tenantId) && isAdmin()
+          && request.resource.data.version == resource.data.version + 1;
+        allow delete: if false; // soft delete only via update
+      }
+
+      // Activation Gates - Fase 1.5
+      // ADMIN: full access for liberation workflow
+      // OPERACIONAL: read-only
+      match /activationGates/{docId} {
+        allow read: if isSameTenant(tenantId) && isActiveUser();
+        allow create: if isSameTenant(tenantId) && isAdmin()
+          && request.resource.data.keys().hasAll(['tenantId', 'clientId', 'status'])
+          && request.resource.data.tenantId == tenantId
+          && request.resource.data.version == 1
+          && request.resource.data.isDeleted == false;
+        allow update: if isSameTenant(tenantId) && isAdmin()
+          && request.resource.data.version == resource.data.version + 1;
+        allow delete: if false; // soft delete only via update
+      }
+
+      // Internal Comments - Fase 1.5
+      // ADMIN: full access
+      // OPERACIONAL: read-only
+      match /internalComments/{docId} {
+        allow read: if isSameTenant(tenantId) && isActiveUser();
+        allow create: if isSameTenant(tenantId) && isAdmin()
+          && request.resource.data.keys().hasAll(['tenantId', 'clientId', 'content', 'createdBy'])
+          && request.resource.data.tenantId == tenantId
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.version == 1
+          && request.resource.data.isDeleted == false;
+        allow update: if isSameTenant(tenantId) && isAdmin()
+          && request.resource.data.version == resource.data.version + 1;
+        allow delete: if false; // soft delete only via update
+      }
+
+      // Document Files - Fase 1.5
+      // ADMIN: full access
+      // OPERACIONAL: read only documents with visibilidadeOperacional == true
+      match /documentFiles/{docId} {
+        allow read: if isSameTenant(tenantId) && isActiveUser()
+          && (isAdmin() || resource.data.visibilidadeOperacional == true);
+        allow create: if isSameTenant(tenantId) && isAdmin()
+          && request.resource.data.keys().hasAll(['tenantId', 'clienteId', 'titulo', 'tipo', 'url', 'uploadedBy'])
+          && request.resource.data.tenantId == tenantId
+          && request.resource.data.uploadedBy == request.auth.uid
+          && request.resource.data.version == 1
+          && request.resource.data.isDeleted == false;
+        allow update: if isSameTenant(tenantId) && isAdmin()
+          && request.resource.data.version == resource.data.version + 1;
+        allow delete: if false; // soft delete only via update
+      }
+
+      // ─── AuditLogs ──────────────────────────────────────────────────────────
+      match /auditLogs/{docId} {
+        allow read: if isSameTenant(tenantId) && isAdmin();
+        allow create: if isSameTenant(tenantId) && isActiveUser()
+          && request.resource.data.keys().hasAll(['tenantId', 'action', 'userId', 'createdAt'])
+          && request.resource.data.tenantId == tenantId
+          && request.resource.data.userId == request.auth.uid
+          && isAllowedAuditAction(request.resource.data.action);
+        allow update, delete: if false;
+      }
+
+      // ─── SyncLogs ───────────────────────────────────────────────────────────
+      match /syncLogs/{docId} {
+        allow read: if isSameTenant(tenantId) && isAdmin();
+        allow create: if isSameTenant(tenantId) && isActiveUser()
+          && request.resource.data.tenantId == tenantId
+          && request.resource.data.keys().hasAll(['tenantId', 'source', 'status', 'startedAt'])
+          && request.resource.data.status in ['STARTED', 'SUCCESS', 'PARTIAL', 'FAILED', 'SKIPPED']
+          && request.resource.data.source in ['ASAAS', 'KIWIFY', 'CLICKSIGN', 'MANUAL', 'IMPORT', 'SYSTEM'];
+        allow update, delete: if false;
+      }
+
+      // ─── Migrations markers ─────────────────────────────────────────────────
+      match /migrations/{docId} {
+        allow read: if isSameTenant(tenantId) && isAdmin();
+        allow create: if isSameTenant(tenantId) && isAdmin()
+          && request.resource.data.tenantId == tenantId
+          && request.resource.data.keys().hasAll(['tenantId', 'migrationId', 'appliedAt']);
+        allow update, delete: if false;
+      }
+    }
+  }
+}
