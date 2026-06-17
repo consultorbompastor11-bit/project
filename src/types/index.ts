@@ -72,6 +72,34 @@ export interface FixedCost extends BaseEntity {
   dataFim?: Date | Timestamp;
 }
 
+export interface CreateFixedCostDTO {
+  descricao: string;
+  valor: string | number | Decimal;
+  diaVencimento: number;
+  categoriaId: string;
+  contaDestino?: string;
+  cnpjAtrelado?: string;
+  observacao?: string;
+  recorrencia: FixedCostRecorrencia;
+  ativo: boolean;
+  dataInicio?: Date | string;
+  dataFim?: Date | string;
+}
+
+export interface UpdateFixedCostDTO {
+  descricao?: string;
+  valor?: string | number | Decimal;
+  diaVencimento?: number;
+  categoriaId?: string;
+  contaDestino?: string;
+  cnpjAtrelado?: string;
+  observacao?: string;
+  recorrencia?: FixedCostRecorrencia;
+  ativo?: boolean;
+  dataInicio?: Date | string;
+  dataFim?: Date | string;
+}
+
 export interface Goal extends BaseEntity {
   mesAno: string;
   valor: number;
@@ -94,6 +122,33 @@ export interface Debt extends BaseEntity {
   parcelas: DebtParcela[];
   dataVencimentoFinal: Date | Timestamp;
   visibilidade: Visibilidade;
+  cnpjAtrelado?: string;
+  observacao?: string;
+}
+
+export interface CreateDebtDTO {
+  tipo: DebtType;
+  descricao: string;
+  credor: string;
+  valorTotal: string | number | Decimal;
+  parcelas: Array<{
+    numero: number;
+    valor: string | number | Decimal;
+    dataVencimento: Date | string;
+    observacao?: string;
+  }>;
+  dataVencimentoFinal: Date | string;
+  visibilidade: Visibilidade;
+  cnpjAtrelado?: string;
+  observacao?: string;
+}
+
+export interface UpdateDebtDTO {
+  tipo?: DebtType;
+  descricao?: string;
+  credor?: string;
+  valorTotal?: string | number | Decimal;
+  visibilidade?: Visibilidade;
   cnpjAtrelado?: string;
   observacao?: string;
 }
