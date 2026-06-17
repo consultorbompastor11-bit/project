@@ -19,13 +19,12 @@ const fixedCostSchema = z.object({
   cnpjAtrelado: z.string().optional(),
   observacao: z.string().optional(),
   recorrencia: z.enum(['MENSAL', 'UNICA']),
+  ativo: z.boolean().default(true),
   dataInicio: z.union([z.date(), z.string()]).optional(),
   dataFim: z.union([z.date(), z.string()]).optional(),
 });
 
-const updateFixedCostSchema = fixedCostSchema.partial().extend({
-  ativo: z.boolean().optional(),
-});
+const updateFixedCostSchema = fixedCostSchema.partial();
 
 export async function createFixedCost(
   tenantId: string,

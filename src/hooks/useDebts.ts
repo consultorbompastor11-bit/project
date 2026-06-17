@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listDebts, getDebt, listVencendoEm7Dias } from '../repositories/debtRepository';
+import { listDebts, getDebt, listVencendoEm7Dias, createDebt, updateDebt, softDeleteDebt } from '../repositories/debtRepository';
 import { QUERY_KEYS } from './queryKeys';
 import type { UserRole } from '../domain/enums';
 import type { CreateDebtDTO, UpdateDebtDTO } from '../types';
@@ -32,9 +32,7 @@ export function useCreateDebt(tenantId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: { dto: CreateDebtDTO; userId: string }) =>
-      import('../repositories/debtRepository').then(({ createDebt }) =>
-        createDebt(tenantId!, params.dto, params.userId)
-      ),
+      createDebt(tenantId!, params.dto, params.userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.debts.all(tenantId ?? '') });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.debts.vencendoEm7Dias(tenantId ?? '') });
@@ -46,9 +44,7 @@ export function useUpdateDebt(tenantId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: { id: string; updates: UpdateDebtDTO; userId: string }) =>
-      import('../repositories/debtRepository').then(({ updateDebt }) =>
-        updateDebt(tenantId!, params.id, params.updates, params.userId)
-      ),
+      updateDebt(tenantId!, params.id, params.updates, params.userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.debts.all(tenantId ?? '') });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.debts.vencendoEm7Dias(tenantId ?? '') });
@@ -60,9 +56,7 @@ export function useDeleteDebt(tenantId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: { id: string; userId: string }) =>
-      import('../repositories/debtRepository').then(({ softDeleteDebt }) =>
-        softDeleteDebt(tenantId!, params.id, params.userId)
-      ),
+      softDeleteDebt(tenantId!, params.id, params.userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.debts.all(tenantId ?? '') });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.debts.vencendoEm7Dias(tenantId ?? '') });
